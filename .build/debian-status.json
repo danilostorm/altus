@@ -1,10 +1,10 @@
 {
   "status": "success",
-  "version": "5.8.1",
+  "version": "5.8.1-2",
   "architecture": "amd64",
-  "deb_name": "altus_5.8.1_amd64.deb",
-  "release_tag": "deb-v5.8.1",
-  "run_id": "30328536367",
-  "run_url": "https://github.com/danilostorm/altus/actions/runs/30328536367",
-  "commit": "e4fd352c113f252f2f8e1d3a8269ed0570a07f14"
+  "deb_name": "altus_5.8.1-2_amd64.deb",
+  "release_tag": "deb-v5.8.1-2",
+  "run_id": "30388413330",
+  "run_url": "https://github.com/danilostorm/altus/actions/runs/30388413330",
+  "commit": "5f6d8b71bcd91e29d09e55eed6d72fcd3ee68278"
 }
