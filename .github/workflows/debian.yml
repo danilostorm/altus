@@ -1,0 +1,90 @@
+name: Debian package
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - "makers/MakerDeb.ts"
+      - "forge.config.ts"
+      - "package.json"
+      - "yarn.lock"
+      - "src/**"
+      - "public/**"
+      - ".github/workflows/debian.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install Debian build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot dpkg
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build Altus DEB
+        run: yarn run make -p linux --arch x64
+
+      - name: Locate and validate package
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEB_FILE="$(find out/make -maxdepth 2 -type f -name '*.deb' -print -quit)"
+          if [ -z "$DEB_FILE" ]; then
+            echo "No .deb package was generated"
+            find out -maxdepth 4 -type f -print || true
+            exit 1
+          fi
+          echo "file=$DEB_FILE" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$DEB_FILE")" >> "$GITHUB_OUTPUT"
+          dpkg-deb --info "$DEB_FILE"
+          dpkg-deb --contents "$DEB_FILE" | head -n 100
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: altus-deb-amd64
+          path: ${{ steps.package.outputs.file }}
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEB_FILE: ${{ steps.package.outputs.file }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="deb-v${VERSION}"
+          TITLE="Altus v${VERSION} - Debian/Ubuntu"
+          NOTES="Pacote .deb amd64 do Altus v${VERSION}, gerado automaticamente a partir deste código-fonte. Instale com: sudo apt install ./$(basename "$DEB_FILE")"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$DEB_FILE" --clobber
+          else
+            gh release create "$TAG" "$DEB_FILE" \
+              --target "$GITHUB_SHA" \
+              --title "$TITLE" \
+              --notes "$NOTES"
+          fi
