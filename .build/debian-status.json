@@ -1,0 +1,10 @@
+{
+  "status": "failure",
+  "version": "5.8.1",
+  "architecture": "amd64",
+  "deb_name": "",
+  "release_tag": "deb-v5.8.1",
+  "run_id": "30328339399",
+  "run_url": "https://github.com/danilostorm/altus/actions/runs/30328339399",
+  "commit": "1c0c58a48b0e653496b42de67141c55332254ad1"
+}
