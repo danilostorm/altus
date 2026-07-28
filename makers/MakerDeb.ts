@@ -8,7 +8,7 @@ import { CommonConfig } from "./CommonConfig";
 
 const execFileAsync = promisify(execFile);
 const APP_ID = "harwara.aman.altus";
-const DEBIAN_REVISION = "3";
+const DEBIAN_REVISION = "4";
 
 export default class MakerDeb extends MakerBase<MakerOptions> {
   name = "deb";

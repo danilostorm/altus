@@ -873,7 +873,7 @@ function getLocalizedMainMenu() {
               .showMessageBox({
                 type: "info",
                 title: `Altus v${app.getVersion()}`,
-                message: `Made by Aman Harwara.`,
+                message: `Made by Aman Harwara.\nLinux version by DaNiLoStOrM — hoststorm.cloud`,
                 detail: aboutDialogText,
                 icon: mainIcon,
                 buttons: ["Copy Version Info", "OK"],
