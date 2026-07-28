@@ -88,3 +88,32 @@ jobs:
               --title "$TITLE" \
               --notes "$NOTES"
           fi
+
+      - name: Record build status
+        if: always()
+        env:
+          BUILD_STATUS: ${{ job.status }}
+          DEB_NAME: ${{ steps.package.outputs.name }}
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          mkdir -p .build
+          cat > .build/debian-status.json <<EOF
+          {
+            "status": "${BUILD_STATUS}",
+            "version": "${VERSION}",
+            "architecture": "amd64",
+            "deb_name": "${DEB_NAME}",
+            "release_tag": "deb-v${VERSION}",
+            "run_id": "${GITHUB_RUN_ID}",
+            "run_url": "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}",
+            "commit": "${GITHUB_SHA}"
+          }
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .build/debian-status.json
+          git commit -m "record Debian build status" || exit 0
+          git pull --rebase origin master
+          git push origin HEAD:master
