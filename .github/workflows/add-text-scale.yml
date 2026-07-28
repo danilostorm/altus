@@ -1,0 +1,139 @@
+name: Add WhatsApp text scaling
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/add-text-scale.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  patch-text-scaling:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Add persistent text scaling
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          # Add the persisted setting.
+          common_path = Path("src/stores/settings/common.ts")
+          common = common_path.read_text(encoding="utf-8")
+          common = common.replace(
+              '  systemScrollbars: z.object({ value: z.boolean() }),\n  rememberWindowSize:',
+              '  systemScrollbars: z.object({ value: z.boolean() }),\n  textScale: z.object({ value: z.number() }),\n  rememberWindowSize:',
+              1,
+          )
+          common = common.replace(
+              '  systemScrollbars: false,\n  rememberWindowSize:',
+              '  systemScrollbars: false,\n  textScale: 1,\n  rememberWindowSize:',
+              1,
+          )
+          common = common.replace(
+              '  systemScrollbars: { value: DefaultSettingValues.systemScrollbars },\n  rememberWindowSize:',
+              '  systemScrollbars: { value: DefaultSettingValues.systemScrollbars },\n  textScale: { value: DefaultSettingValues.textScale },\n  rememberWindowSize:',
+              1,
+          )
+          if 'textScale: z.object' not in common or 'textScale: 1' not in common:
+              raise SystemExit("Failed to patch settings schema")
+          common_path.write_text(common, encoding="utf-8")
+
+          # Apply the selected scale to every WhatsApp webview.
+          webview_path = Path("src/components/WebView.tsx")
+          webview = webview_path.read_text(encoding="utf-8")
+          webview = webview.replace(
+              'import { unwrap } from "solid-js/store";\n',
+              'import { unwrap } from "solid-js/store";\nimport { getSettingValue } from "../stores/settings/solid";\n',
+              1,
+          )
+          zoom_effect = '''\n  createEffect(() => {\n    if (!webviewRef) return;\n    if (!didStopLoading()) return;\n\n    webviewRef.setZoomFactor(getSettingValue("textScale"));\n  });\n'''
+          webview = webview.replace(
+              '\n  onMount(() => {\n',
+              zoom_effect + '\n  onMount(() => {\n',
+              1,
+          )
+          if 'setZoomFactor(getSettingValue("textScale"))' not in webview:
+              raise SystemExit("Failed to patch WebView zoom")
+          webview_path.write_text(webview, encoding="utf-8")
+
+          # Add the selector to Settings.
+          dialog_path = Path("src/components/SettingsDialog.tsx")
+          dialog = dialog_path.read_text(encoding="utf-8")
+          marker = '''              <div class="py-2.5">\n                <StyledSelect\n                  rootClass="items-start justify-between"\n                  triggerClass="min-w-[15ch]"\n                  multiple={false}\n                  label={\n                    <div class="flex flex-col gap-1.5">\n                      <div class="font-semibold">{t("tabBarPosition")}</div>'''
+          text_scale_block = '''              <div class="py-2.5">\n                <StyledSelect\n                  rootClass="items-start justify-between"\n                  triggerClass="min-w-[15ch]"\n                  multiple={false}\n                  label={\n                    <div class="flex flex-col gap-1.5">\n                      <div class="font-semibold">{t("textScale")}</div>\n                      <div class="text-zinc-300 max-w-[30ch] leading-snug text-sm">\n                        {t("textScaleDescription")}\n                      </div>\n                    </div>\n                  }\n                  options={[0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75]}\n                  value={getSettingValue("textScale")}\n                  onChange={(scale) => {\n                    if (scale !== null) {\n                      setSettingValue("textScale", scale);\n                    }\n                  }}\n                  valueRender={(state) =>\n                    `${Math.round((state.selectedOption() ?? 1) * 100)}%`\n                  }\n                  itemLabelRender={(item) =>\n                    `${Math.round(item.rawValue * 100)}%`\n                  }\n                />\n              </div>\n'''
+          if marker not in dialog:
+              raise SystemExit("Settings insertion marker not found")
+          dialog = dialog.replace(marker, text_scale_block + marker, 1)
+          dialog_path.write_text(dialog, encoding="utf-8")
+
+          # Add English and Brazilian Portuguese labels.
+          translations = {
+              "public/locales/en/translation.json": {
+                  "textScale": "Text Size",
+                  "textScaleDescription": "Adjusts the size of text and interface inside WhatsApp. The selected value is saved automatically.",
+              },
+              "public/locales/pt-br/translation.json": {
+                  "textScale": "Tamanho do Texto",
+                  "textScaleDescription": "Ajusta o tamanho dos textos e da interface dentro do WhatsApp. O valor escolhido é salvo automaticamente.",
+              },
+          }
+          for filename, additions in translations.items():
+              path = Path(filename)
+              data = json.loads(path.read_text(encoding="utf-8"))
+              data.update(additions)
+              path.write_text(
+                  json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+                  encoding="utf-8",
+              )
+
+          # Bump only the Debian package revision.
+          maker_path = Path("makers/MakerDeb.ts")
+          maker = maker_path.read_text(encoding="utf-8")
+          old_revision = 'const DEBIAN_REVISION = "4";'
+          new_revision = 'const DEBIAN_REVISION = "5";'
+          if old_revision not in maker:
+              raise SystemExit("Debian revision marker not found")
+          maker_path.write_text(maker.replace(old_revision, new_revision, 1), encoding="utf-8")
+
+          Path(".github/workflows/add-text-scale.yml").unlink()
+          PY
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Validate source
+        run: yarn lint
+
+      - name: Commit text scaling feature
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/stores/settings/common.ts src/components/WebView.tsx src/components/SettingsDialog.tsx public/locales/en/translation.json public/locales/pt-br/translation.json makers/MakerDeb.ts .github/workflows/add-text-scale.yml
+          git commit -m "add persistent WhatsApp text scaling"
+          git pull --rebase origin master
+          git push origin HEAD:master
+
+      - name: Build Debian revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run debian.yml --ref master
