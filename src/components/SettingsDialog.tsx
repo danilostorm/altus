@@ -115,6 +115,34 @@ const SettingsDialog: Component<{
                   multiple={false}
                   label={
                     <div class="flex flex-col gap-1.5">
+                      <div class="font-semibold">{t("textScale")}</div>
+                      <div class="text-zinc-300 max-w-[30ch] leading-snug text-sm">
+                        {t("textScaleDescription")}
+                      </div>
+                    </div>
+                  }
+                  options={[0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75]}
+                  value={getSettingValue("textScale")}
+                  onChange={(scale) => {
+                    if (scale !== null) {
+                      setSettingValue("textScale", scale);
+                    }
+                  }}
+                  valueRender={(state) =>
+                    `${Math.round((state.selectedOption() ?? 1) * 100)}%`
+                  }
+                  itemLabelRender={(item) =>
+                    `${Math.round(item.rawValue * 100)}%`
+                  }
+                />
+              </div>
+              <div class="py-2.5">
+                <StyledSelect
+                  rootClass="items-start justify-between"
+                  triggerClass="min-w-[15ch]"
+                  multiple={false}
+                  label={
+                    <div class="flex flex-col gap-1.5">
                       <div class="font-semibold">{t("tabBarPosition")}</div>
                       <div class="text-zinc-300 max-w-[30ch] leading-snug text-sm">
                         {t("tabBarPositionDescription")}

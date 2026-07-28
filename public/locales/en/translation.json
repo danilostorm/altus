@@ -106,5 +106,7 @@
   "Exit": "Exit",
   "Cancel": "Cancel",
   "Are you sure you want to exit?": "Are you sure you want to exit?",
-  "Pick color": "Pick color"
+  "Pick color": "Pick color",
+  "textScale": "Text Size",
+  "textScaleDescription": "Adjusts the size of text and interface inside WhatsApp. The selected value is saved automatically."
 }

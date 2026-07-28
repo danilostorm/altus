@@ -101,5 +101,7 @@
   "selectPreset": "Selecione uma predefinição...",
   "bgColor": "Cor de Fundo",
   "fgColor": "Cor do Primeiro Plano",
-  "acColor": "Cor de Destaque"
+  "acColor": "Cor de Destaque",
+  "textScale": "Tamanho do Texto",
+  "textScaleDescription": "Ajusta o tamanho dos textos e da interface dentro do WhatsApp. O valor escolhido é salvo automaticamente."
 }

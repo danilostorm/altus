@@ -9,6 +9,7 @@ import { type Tab } from "../stores/tabs/common";
 import { WebviewTag } from "electron";
 import { themeStore } from "../stores/themes/solid";
 import { unwrap } from "solid-js/store";
+import { getSettingValue } from "../stores/settings/solid";
 
 const WebView: Component<{ tab: Tab }> = (props) => {
   let webviewRef: WebviewTag | undefined;
@@ -60,6 +61,13 @@ const WebView: Component<{ tab: Tab }> = (props) => {
     if (!didStopLoading()) return;
 
     webviewRef.send("set-id", props.tab.id);
+  });
+
+  createEffect(() => {
+    if (!webviewRef) return;
+    if (!didStopLoading()) return;
+
+    webviewRef.setZoomFactor(getSettingValue("textScale"));
   });
 
   onMount(() => {
