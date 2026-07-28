@@ -8,7 +8,7 @@ import { CommonConfig } from "./CommonConfig";
 
 const execFileAsync = promisify(execFile);
 const APP_ID = "harwara.aman.altus";
-const DEBIAN_REVISION = "2";
+const DEBIAN_REVISION = "3";
 
 export default class MakerDeb extends MakerBase<MakerOptions> {
   name = "deb";
@@ -34,6 +34,25 @@ export default class MakerDeb extends MakerBase<MakerOptions> {
     await fs.writeFile(
       scriptPath,
       `${script.trimEnd()}\n\n${marker}\nif command -v gtk-update-icon-cache >/dev/null 2>&1; then\n  gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true\nfi\n\nif command -v update-desktop-database >/dev/null 2>&1; then\n  update-desktop-database -q /usr/share/applications || true\nfi\n`,
+      { mode: 0o755 }
+    );
+  }
+
+  private async ensureInstallDirectoryAccess(scriptPath: string): Promise<void> {
+    if (!(await fs.pathExists(scriptPath))) {
+      return;
+    }
+
+    const script = await fs.readFile(scriptPath, "utf8");
+    const marker = "# Ensure Altus is accessible to desktop users";
+
+    if (script.includes(marker)) {
+      return;
+    }
+
+    await fs.writeFile(
+      scriptPath,
+      `${script.trimEnd()}\n\n${marker}\nchmod 0755 /opt/Altus || true\nchmod 0755 /opt/Altus/Altus || true\n`,
       { mode: 0o755 }
     );
   }
@@ -87,6 +106,11 @@ export default class MakerDeb extends MakerBase<MakerOptions> {
     await fs.remove(stagingPath);
     await fs.ensureDir(stagingPath);
     await execFileAsync("dpkg-deb", ["-R", debPath, stagingPath]);
+
+    const appDirectory = path.join(stagingPath, "opt", "Altus");
+    const appExecutable = path.join(appDirectory, "Altus");
+    await fs.chmod(appDirectory, 0o755);
+    await fs.chmod(appExecutable, 0o755);
 
     const desktopDirectory = path.join(
       stagingPath,
@@ -170,6 +194,9 @@ export default class MakerDeb extends MakerBase<MakerOptions> {
         path.join(stagingPath, "DEBIAN", "postinst")
       ),
       this.appendIconCacheRefresh(path.join(stagingPath, "DEBIAN", "postrm")),
+      this.ensureInstallDirectoryAccess(
+        path.join(stagingPath, "DEBIAN", "postinst")
+      ),
     ]);
 
     const architectureMatch = control.match(/^Architecture:\s*(.+)$/m);
