@@ -14,7 +14,7 @@ export default class MakerDeb extends MakerBase<MakerOptions> {
   }
 
   async make(options: MakerOptions): Promise<string[]> {
-    const { makeDir, targetArch, forgeConfig, appName, packageJSON } = options;
+    const { makeDir, targetArch, forgeConfig, appName } = options;
     const executableName = forgeConfig.packagerConfig.executableName || appName;
 
     const outPath = path.resolve(makeDir, "deb");
@@ -42,8 +42,6 @@ export default class MakerDeb extends MakerBase<MakerOptions> {
           linux: {
             executableName,
             category: "Network;InstantMessaging",
-            synopsis: packageJSON.description,
-            description: packageJSON.description,
           },
           deb: {
             priority: "optional",
