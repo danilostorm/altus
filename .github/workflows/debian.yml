@@ -1,3 +1,4 @@
+# Debian build workflow; refreshed for the persistent WhatsApp text-size release.
 name: Debian package
 
 on:
@@ -81,6 +82,8 @@ jobs:
           grep -q '^Exec=/usr/bin/altus %U$' /tmp/altus-deb-root/usr/share/applications/harwara.aman.altus.desktop
           grep -q '^Icon=harwara.aman.altus$' /tmp/altus-deb-root/usr/share/applications/harwara.aman.altus.desktop
           grep -q '<launchable type="desktop-id">harwara.aman.altus.desktop</launchable>' /tmp/altus-deb-root/usr/share/metainfo/harwara.aman.altus.metainfo.xml
+          grep -R -q 'Tamanho do Texto' /tmp/altus-deb-root/opt/Altus/resources/app
+          grep -R -q 'Linux version by DaNiLoStOrM' /tmp/altus-deb-root/opt/Altus/resources/app
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
@@ -99,7 +102,7 @@ jobs:
           set -euo pipefail
           TAG="deb-v${DEB_VERSION}"
           TITLE="Altus v${DEB_VERSION} - Debian/Ubuntu"
-          NOTES="Pacote .deb amd64 do Altus v${DEB_VERSION}. Esta revisão corrige o ícone, a entrada no menu, o botão Abrir no gerenciador de aplicativos e adiciona o comando altus. Instale com: sudo apt install ./$(basename "$DEB_FILE")"
+          NOTES="Pacote .deb amd64 do Altus v${DEB_VERSION}. Inclui ajuste persistente de tamanho do texto do WhatsApp (80% a 175%), atalhos Ctrl +, Ctrl - e Ctrl 0, integração com menu/ícone e crédito da versão Linux para DaNiLoStOrM — hoststorm.cloud. Instale com: sudo apt install ./$(basename "$DEB_FILE")"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$DEB_FILE" --clobber
@@ -119,7 +122,7 @@ jobs:
         shell: bash
         run: |
           if [ -z "${DEB_VERSION}" ]; then
-            DEB_VERSION="$(node -p "require('./package.json').version")-2"
+            DEB_VERSION="$(node -p "require('./package.json').version")-5"
           fi
 
           mkdir -p .build
