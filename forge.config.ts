@@ -1,6 +1,7 @@
 import type { ForgeConfig } from "@electron-forge/shared-types";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import MakerAppImage from "./makers/MakerAppImage";
+import MakerDeb from "./makers/MakerDeb";
 import MakerNSIS from "./makers/MakerNSIS";
 import MakerDMG from "./makers/MakerDMG";
 
@@ -17,7 +18,7 @@ const config: ForgeConfig = {
     ],
   },
   rebuildConfig: {},
-  makers: [new MakerAppImage(), new MakerDMG(), new MakerNSIS()],
+  makers: [new MakerAppImage(), new MakerDeb(), new MakerDMG(), new MakerNSIS()],
   plugins: [
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
