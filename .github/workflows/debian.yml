@@ -37,7 +37,7 @@ jobs:
       - name: Install Debian build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y fakeroot dpkg
+          sudo apt-get install -y fakeroot dpkg desktop-file-utils appstream
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -56,11 +56,31 @@ jobs:
             find out -maxdepth 4 -type f -print || true
             exit 1
           fi
+
+          DEB_VERSION="$(dpkg-deb -f "$DEB_FILE" Version)"
           echo "file=$DEB_FILE" >> "$GITHUB_OUTPUT"
           echo "name=$(basename "$DEB_FILE")" >> "$GITHUB_OUTPUT"
+          echo "version=$DEB_VERSION" >> "$GITHUB_OUTPUT"
+
           dpkg-deb --info "$DEB_FILE"
           dpkg-deb --contents "$DEB_FILE" > /tmp/altus-deb-contents.txt
-          sed -n '1,100p' /tmp/altus-deb-contents.txt
+          sed -n '1,120p' /tmp/altus-deb-contents.txt
+
+          rm -rf /tmp/altus-deb-root
+          dpkg-deb -x "$DEB_FILE" /tmp/altus-deb-root
+
+          test -x /tmp/altus-deb-root/opt/Altus/Altus
+          test -L /tmp/altus-deb-root/usr/bin/altus
+          test -f /tmp/altus-deb-root/usr/share/applications/harwara.aman.altus.desktop
+          test -f /tmp/altus-deb-root/usr/share/icons/hicolor/256x256/apps/harwara.aman.altus.png
+          test -f /tmp/altus-deb-root/usr/share/metainfo/harwara.aman.altus.metainfo.xml
+
+          desktop-file-validate /tmp/altus-deb-root/usr/share/applications/harwara.aman.altus.desktop
+          appstreamcli validate /tmp/altus-deb-root/usr/share/metainfo/harwara.aman.altus.metainfo.xml
+
+          grep -q '^Exec=/usr/bin/altus %U$' /tmp/altus-deb-root/usr/share/applications/harwara.aman.altus.desktop
+          grep -q '^Icon=harwara.aman.altus$' /tmp/altus-deb-root/usr/share/applications/harwara.aman.altus.desktop
+          grep -q '<launchable type="desktop-id">harwara.aman.altus.desktop</launchable>' /tmp/altus-deb-root/usr/share/metainfo/harwara.aman.altus.metainfo.xml
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
@@ -73,13 +93,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DEB_FILE: ${{ steps.package.outputs.file }}
+          DEB_VERSION: ${{ steps.package.outputs.version }}
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(node -p "require('./package.json').version")"
-          TAG="deb-v${VERSION}"
-          TITLE="Altus v${VERSION} - Debian/Ubuntu"
-          NOTES="Pacote .deb amd64 do Altus v${VERSION}, gerado automaticamente a partir deste código-fonte. Instale com: sudo apt install ./$(basename "$DEB_FILE")"
+          TAG="deb-v${DEB_VERSION}"
+          TITLE="Altus v${DEB_VERSION} - Debian/Ubuntu"
+          NOTES="Pacote .deb amd64 do Altus v${DEB_VERSION}. Esta revisão corrige o ícone, a entrada no menu, o botão Abrir no gerenciador de aplicativos e adiciona o comando altus. Instale com: sudo apt install ./$(basename "$DEB_FILE")"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$DEB_FILE" --clobber
@@ -95,17 +115,21 @@ jobs:
         env:
           BUILD_STATUS: ${{ job.status }}
           DEB_NAME: ${{ steps.package.outputs.name }}
+          DEB_VERSION: ${{ steps.package.outputs.version }}
         shell: bash
         run: |
-          VERSION="$(node -p "require('./package.json').version")"
+          if [ -z "${DEB_VERSION}" ]; then
+            DEB_VERSION="$(node -p "require('./package.json').version")-2"
+          fi
+
           mkdir -p .build
           cat > .build/debian-status.json <<EOF
           {
             "status": "${BUILD_STATUS}",
-            "version": "${VERSION}",
+            "version": "${DEB_VERSION}",
             "architecture": "amd64",
             "deb_name": "${DEB_NAME}",
-            "release_tag": "deb-v${VERSION}",
+            "release_tag": "deb-v${DEB_VERSION}",
             "run_id": "${GITHUB_RUN_ID}",
             "run_url": "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}",
             "commit": "${GITHUB_SHA}"
