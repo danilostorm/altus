@@ -1,4 +1,4 @@
-# Debian build workflow; refreshed for the persistent WhatsApp text-size release.
+# Direct Debian build retry for the persistent WhatsApp text-size release.
 name: Debian package
 
 on:
